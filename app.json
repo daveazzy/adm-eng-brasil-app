@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "adm-eng-brasil-app",
+    "name": "Admin engBRASIL",
     "slug": "adm-eng-brasil-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,10 +18,16 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.daveazzy.admengbrasilapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "484440a6-a744-40a1-a954-44283f9a6d9e"
+      }
     }
   }
 }
