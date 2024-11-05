@@ -1,21 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ScrollView, Alert, Text } from 'react-native';
+import { ScrollView, Alert } from 'react-native';
 import { SearchBar } from '../../components/search-bar';
 import { Accreditation, AccreditationText, Body, Container, GreyBar, Header, SessionTitle } from './styles';
 import { Feather } from '@expo/vector-icons';
 import { api } from '../../services/api';
-import { Speaker } from '../../components/speaker-cards';
-import { SpeakerCard } from '../../components/speaker-cards';
+import { Speaker, SpeakerCard } from '../../components/speaker-cards';
 import { CameraModal } from '../../components/camera-modal';
-function regexText(text: string): string {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
+import { CameraModalAccreditation } from '../../components/camera-accreditations-modal';
+import { regexText } from '../../utils';
 
 export function Home() {
   const [searchText, setSearchText] = useState<string>('');
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [filteredSpeakers, setFilteredSpeakers] = useState<Speaker[]>([]);
   const [isCameraVisible, setIsCameraVisible] = useState(false);
+  const [isAccreditationCameraVisible, setIsAccreditationCameraVisible] = useState(false);
   const [selectedSpeakerId, setSelectedSpeakerId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,37 +60,37 @@ export function Home() {
     filterSpeakers();
   }, [searchText, filterSpeakers]);
 
-  const handleQRCodeScan = (participantId: string) => {
-    api.post(`/congresses/b213202f-bb2d-4b7a-bd6d-e7459694eba0/accreditations`, {
-      participantId,
-      paymentType: '2kg alimento'
-    })
-      .then(() => {
-        Alert.alert('Credenciamento no congresso realizado com sucesso!');
-      })
-      .catch(error => {
-        console.error('Erro ao realizar credenciamento:', error);
-        Alert.alert('Erro ao realizar credenciamento');
-      })
-      .finally(() => setIsCameraVisible(false));
+  const handleQRCodeScan = async (participantId: string) => {
+    try {
+      await api.post(`/congresses/b213202f-bb2d-4b7a-bd6d-e7459694eba0/accreditations`, {
+        participantId,
+        paymentType: '2kg alimento'
+      });
+      Alert.alert('Credenciamento no congresso realizado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao realizar credenciamento:', error);
+      Alert.alert('Erro ao realizar credenciamento');
+    } finally {
+      setIsAccreditationCameraVisible(false);
+    }
   };
 
-  const registerAttendance = (participantId: string) => {
+  const registerAttendance = async (participantId: string) => {
     if (!selectedSpeakerId) return;
 
-    api.post('/attendances/${selectedSpeakerId}', {
-      participantId,
-    })
-      .then(() => {
-        Alert.alert('Presença na palestra registrada com sucesso!');
-      })
-      .catch(error => {
-        console.error('Erro ao registrar presença na palestra:', error);
-        Alert.alert('Erro ao registrar presença na palestra');
-      })
-      .finally(() => setIsCameraVisible(false));
+    try {
+      await api.post(`/attendance/speaker/${selectedSpeakerId}`, {
+        participantId,
+        type: 'SPEAKER'
+      });
+      Alert.alert('Presença na palestra registrada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao registrar presença na palestra:', error);
+      Alert.alert('Erro ao registrar presença na palestra');
+    } finally {
+      setIsCameraVisible(false);
+    }
   };
-  
 
   const openCameraForAttendance = (speakerId: string) => {
     setSelectedSpeakerId(speakerId);
@@ -111,20 +110,20 @@ export function Home() {
 
       <Body showsVerticalScrollIndicator={false}>
         <SessionTitle style={{ margin: 16 }}>Credenciamento</SessionTitle>
-        <Accreditation onPress={() => setIsCameraVisible(true)}>
+        <Accreditation onPress={() => setIsAccreditationCameraVisible(true)}>
           <AccreditationText>Registrar credenciamento</AccreditationText>
           <Feather name="chevron-right" size={24} color={'white'} />
         </Accreditation>
 
-        <SessionTitle style={{ margin: 16 }}>Presença nas Palestras</SessionTitle>
+        <SessionTitle style={{ margin: 16 }}>Palestras</SessionTitle>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
           {filteredSpeakers.map((speaker) => (
-              <SpeakerCard
-                key={speaker.id}
-                speaker={speaker}
-                onPress={() => openCameraForAttendance(speaker.id.toString())}
-              />
+            <SpeakerCard
+              key={speaker.id}
+              speaker={speaker}
+              onPress={() => openCameraForAttendance(speaker.id.toString())}
+            />
           ))}
         </ScrollView>
       </Body>
@@ -132,13 +131,13 @@ export function Home() {
       <CameraModal
         visible={isCameraVisible}
         onClose={() => setIsCameraVisible(false)}
-        onQRCodeScanned={(data) => {
-          if (selectedSpeakerId) {
-            registerAttendance(data);
-          } else {
-            handleQRCodeScan(data);
-          }
-        }}
+        onQRCodeScanned={(data) => registerAttendance(data)}
+      />
+
+      <CameraModalAccreditation
+        visible={isAccreditationCameraVisible}
+        onClose={() => setIsAccreditationCameraVisible(false)}
+        onQRCodeScanned={handleQRCodeScan}
       />
     </Container>
   );
